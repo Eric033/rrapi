@@ -1,0 +1,140 @@
+# Business Logic Mapping Configuration
+# Maps API endpoints to business logic descriptions and expected responses
+
+mappings:
+  # Authentication endpoints
+  - path: /api/login
+    business_logic: "用户登录"
+    expected_response:
+      code: 0
+      success: true
+    description: "用户登录获取访问令牌"
+
+  - path: /api/logout
+    business_logic: "用户登出"
+    expected_response:
+      code: 0
+      success: true
+    description: "用户退出登录"
+
+  - path: /api/refresh
+    business_logic: "刷新令牌"
+    expected_response:
+      code: 0
+      success: true
+    description: "刷新访问令牌"
+
+  # User management endpoints
+  - path: /api/users
+    business_logic: "获取用户列表"
+    method: GET
+    expected_response:
+      code: 0
+      success: true
+    description: "分页获取用户列表"
+
+  - path: /api/users
+    business_logic: "创建用户"
+    method: POST
+    expected_response:
+      code: 0
+      success: true
+    description: "创建新用户账号"
+
+  - path: /api/users/{id}
+    business_logic: "获取用户详情"
+    method: GET
+    expected_response:
+      code: 0
+      success: true
+    description: "根据ID获取用户详细信息"
+
+  - path: /api/users/{id}
+    business_logic: "更新用户"
+    method: PUT
+    expected_response:
+      code: 0
+      success: true
+    description: "更新用户信息"
+
+  - path: /api/users/{id}
+    business_logic: "删除用户"
+    method: DELETE
+    expected_response:
+      code: 0
+      success: true
+    description: "删除用户账号"
+
+  # Product endpoints
+  - path: /api/products
+    business_logic: "获取商品列表"
+    method: GET
+    expected_response:
+      code: 0
+      success: true
+    description: "获取商品列表"
+
+  - path: /api/products/{id}
+    business_logic: "获取商品详情"
+    method: GET
+    expected_response:
+      code: 0
+      success: true
+    description: "根据ID获取商品详细信息"
+
+  # Order endpoints
+  - path: /api/orders
+    business_logic: "创建订单"
+    method: POST
+    expected_response:
+      code: 0
+      success: true
+    description: "创建新订单"
+
+  - path: /api/orders/{id}
+    business_logic: "查询订单"
+    method: GET
+    expected_response:
+      code: 0
+      success: true
+    description: "查询订单详情"
+
+  - path: /api/orders/{id}/pay
+    business_logic: "订单支付"
+    method: POST
+    expected_response:
+      code: 0
+      success: true
+    description: "支付订单"
+
+  - path: /api/orders/{id}/cancel
+    business_logic: "取消订单"
+    method: POST
+    expected_response:
+      code: 0
+      success: true
+    description: "取消订单"
+
+  # Payment endpoints
+  - path: /api/pay
+    business_logic: "发起支付"
+    method: POST
+    expected_response:
+      code: 0
+      success: true
+    description: "发起支付请求"
+
+  - path: /api/pay/callback
+    business_logic: "支付回调"
+    method: POST
+    expected_response:
+      code: 0
+      success: true
+    description: "处理支付回调"
+
+  # Common success patterns
+  - pattern: "*/success"
+    business_logic: "操作成功"
+    expected_response:
+      code: 0
+      success: true

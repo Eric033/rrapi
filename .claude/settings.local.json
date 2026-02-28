@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find .:*)",
+      "Bash(find flowgenius:*)",
+      "Bash(cd:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv run:*)",
+      "Bash(python3:*)",
+      "Bash(uv pip:*)",
+      "Bash(pgrep:*)",
+      "Bash(timeout 5 mitmweb:*)",
+      "Bash(/Users/eircsun/Code/rrapi/.venv/bin/mitmweb:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

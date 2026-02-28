@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+allure-results/
+allure-report/
+*.cover
+.tox/
+
+# Logs
+*.log
+logs/
+
+# Generated files
+generated/
+output/
+snapshots/
+*.har
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# MitmProxy
+mitmproxy-ca-cert.pem
+ca/
+
+# Allure
+allure/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json

@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flowgenius-smartadapter"
+version = "1.0.0"
+description = "Traffic-driven automated API test script generation tool"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "FlowGenius Team"}
+]
+
+dependencies = [
+    "requests>=2.31.0",
+    "jsonpath-ng>=1.6.0",
+    "pyyaml>=6.0",
+    "jsonschema>=4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "allure-pytest>=2.13.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.4.0",
+    "responses>=0.23.0",
+    "freezegun>=1.2.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["flowgenius*", "mitmproxy_addon*"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=flowgenius",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+]
+markers = [
+    "smoke: Smoke tests",
+    "regression: Regression tests",
+    "api: API tests",
+    "unit: Unit tests",
+    "integration: Integration tests",
+]
+
+[tool.black]
+line-length = 120
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+exclude = [
+    "tests/",
+    "examples/",
+]
