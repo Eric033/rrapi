@@ -277,6 +277,36 @@ class TestDataBuilder:
         """Initialize test data builder."""
         self.logger = get_logger("flowgenius.test_data_builder")
 
+    def _flow_to_test_data(self, flow: TrafficFlow) -> Dict[str, Any]:
+        """Convert a flow to test data dictionary."""
+        data = {
+            "name": f"{flow.request.method} {flow.request.url}",
+            "method": flow.request.method,
+            "url": flow.request.url,
+            "expected_status": flow.response.status_code
+        }
+
+        if flow.request.headers:
+            data["headers"] = flow.request.headers
+
+        if flow.request.query_params:
+            data["params"] = flow.request.query_params
+
+        if flow.request.body:
+            body_json = flow.request.get_body_json()
+            if body_json:
+                data["body"] = body_json
+            else:
+                data["body"] = flow.request.body
+
+        # Add assertions
+        data["assertions"] = {
+            "status_code": flow.response.status_code,
+            "response_time": flow.response.time if flow.response.time else 5.0
+        }
+
+        return data
+
     def build_test_scenarios(
         self,
         flows: List[TrafficFlow],

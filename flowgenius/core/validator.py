@@ -19,6 +19,7 @@ from flowgenius.models.assertion import (
 from flowgenius.models.traffic import TrafficFlow
 from flowgenius.utils.jsonpath import extract_jsonpath, get_jsonpath_value_type, extract_all_paths
 from flowgenius.utils.logger import get_logger
+from flowgenius.core.config import RuleConfig, default_rule_config
 
 if TYPE_CHECKING:
     from flowgenius.llm.base import LLMProvider
@@ -31,15 +32,18 @@ class AssertionGenerator:
     def __init__(
         self,
         llm_provider: Optional["LLMProvider"] = None,
-        enable_llm: bool = True
+        enable_llm: bool = True,
+        rule_config: Optional["RuleConfig"] = None
     ):
         """Initialize assertion generator.
 
         Args:
             llm_provider: Optional LLM provider for semantic analysis
             enable_llm: Whether to use LLM enhancement if provider is available
+            rule_config: Configuration for business rules
         """
         self.logger = get_logger("flowgenius.assertion_generator")
+        self.rule_config = rule_config or default_rule_config
         self.llm_provider = llm_provider
         self.enable_llm = enable_llm and llm_provider is not None
         self._llm_analyzer: Optional["LLMAssertionAnalyzer"] = None
@@ -278,10 +282,7 @@ class AssertionGenerator:
             return assertions
 
         # Common semantic patterns
-        semantic_fields = [
-            "code", "status", "success", "error", "message",
-            "result", "data"
-        ]
+        semantic_fields = self.rule_config.semantic_dictionary.semantic_keys
 
         for field in semantic_fields:
             if field in response_data:
@@ -319,7 +320,7 @@ class AssertionGenerator:
 
                 # Status pattern
                 elif field == "status" and isinstance(value, str):
-                    if value.lower() in ("success", "ok", "completed"):
+                    if value.lower() in self.rule_config.semantic_dictionary.success_status_values:
                         assertion = AssertionRule(
                             assertion_type=AssertionType.EQUALS,
                             category=AssertionCategory.SEMANTIC,
@@ -387,7 +388,7 @@ class AssertionGenerator:
             return assertions
 
         # Create snapshot assertions for key fields
-        snapshot_fields = ["code", "success", "status", "data"]
+        snapshot_fields = self.rule_config.semantic_dictionary.snapshot_fields
 
         for field in snapshot_fields:
             if field in response_data:

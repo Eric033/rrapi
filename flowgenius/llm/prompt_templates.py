@@ -152,7 +152,7 @@ class ApiUser:
 ```
 """
 
-GENERATE_TEST_CASE_PROMPT = """生成一个 Pytest 测试用例。
+GENERATE_TEST_CASE_PROMPT = """生成一个完整的 Pytest 测试用例，包括必要的 fixture 和导入语句。
 
 测试信息:
 - API 路径: {path}
@@ -163,15 +163,25 @@ GENERATE_TEST_CASE_PROMPT = """生成一个 Pytest 测试用例。
 - 业务描述: {business_logic}
 
 要求:
-1. 使用 Pytest 框架
-2. 使用 fixture 管理测试资源
-3. 添加中文文档字符串说明测试目的
-4. 包含清晰的断言和错误信息
-5. 支持数据驱动测试
-6. 处理关联变量提取和使用
+1. 使用 Pytest 框架和标准命名约定
+2. 包含完整的 import 语句（pytest, requests, typing 等）
+3. 生成独立的 fixture 函数（例如: base_url, session, auth_token）
+4. 添加详细的中文文档字符串说明测试目的和预期行为
+5. 包含完整的断言逻辑和错误信息
+6. 支持数据驱动测试（必要时）
+7. 处理关联变量提取和使用（从响应中提取值并在后续请求中使用）
+8. 包含异常处理和错误恢复机制
+9. 遵循 PEP 8 规范
+10. 使用类型提示增强代码可读性
 
-请返回完整的测试方法代码。
-"""
+特别注意：
+- 生成完整的 test class 结构，而不是单独的方法
+- 在类中包含必要的 fixtures（base_url, session等）
+- 生成多个相关测试方法时，请放在同一类中
+- 如果需要，包含 setup/teardown 逻辑
+- 在代码中添加适当的注释来解释复杂的逻辑
+
+请返回完整的 Python 测试类代码，包含所有必要的导入、fixtures 和测试方法，可以直接运行。"""
 
 GENERATE_DOCSTRING_PROMPT = """为以下 API 方法生成文档字符串。
 

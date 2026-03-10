@@ -25,8 +25,8 @@ class LogCollector:
 
     def __init__(
         self,
-        log_pattern: Optional[str] = None,
         output_dir: str = ".",
+        log_pattern: Optional[str] = None,
         filter_static: bool = True,
         custom_parser: Optional[Callable] = None
     ):
@@ -34,8 +34,8 @@ class LogCollector:
         Initialize log collector.
 
         Args:
-            log_pattern: Regex pattern for log parsing (default: NGINX_ACCESS_PATTERN)
             output_dir: Directory to save extracted traffic
+            log_pattern: Regex pattern for log parsing (default: NGINX_ACCESS_PATTERN)
             filter_static: Whether to filter static resources
             custom_parser: Custom parser function for non-standard log formats
         """

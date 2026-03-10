@@ -94,7 +94,7 @@ def extract_all_paths(data: Any, prefix: str = "$") -> List[str]:
     def _extract(obj, current_path):
         if isinstance(obj, dict):
             for key, value in obj.items():
-                new_path = f"{current_path}.{key}" if current_path != "$" else f"${key}"
+                new_path = f"{current_path}.{key}"
                 paths.append(new_path)
                 if isinstance(value, (dict, list)):
                     _extract(value, new_path)

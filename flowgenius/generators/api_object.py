@@ -73,13 +73,12 @@ class APIObjectGenerator:
         lines.append('        self,')
 
         # Add required parameters as method arguments
-        param_args = []
         for param in required_params:
             if param.in_ in ("path", "query"):
                 param_name = param.name
                 param_type = self._get_python_type(param.type)
                 default_value = f' = None' if not param.required else ''
-                param_args.append(f'        {param_name}: {param_type}{default_value}')
+                lines.append(f'        {param_name}: {param_type}{default_value},')
 
         # Add optional arguments
         lines.append('        headers: Optional[Dict[str, str]] = None,')

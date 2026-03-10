@@ -1,6 +1,7 @@
 """Tests for LLM provider base classes."""
 
 import json
+import os
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -166,7 +167,7 @@ class TestOpenAIProvider:
             return real_import(name, *args, **kwargs)
 
         with patch.object(builtins, "__import__", side_effect=mock_import):
-            with pytest.raises(ImportError, match="openai package is required"):
+            with pytest.raises(ImportError, match="'openai' package is required"):
                 provider._get_client()
 
 
@@ -206,3 +207,101 @@ class TestAnthropicProvider:
         result = provider.generate_json("test prompt")
 
         assert result == {"key": "value"}
+
+
+class TestZhipuProvider:
+    """Tests for ZhipuProvider class."""
+
+    def test_init_with_api_key(self):
+        """Test initialization with API key."""
+        from flowgenius.llm.base import ZhipuProvider
+
+        provider = ZhipuProvider(api_key="test-key")
+
+        assert provider.config.api_key == "test-key"
+        assert provider.config.model == "glm-4-flash"  # Default for zhipu
+
+    def test_init_with_env_var(self):
+        """Test initialization with ZHIPU_API_KEY environment variable."""
+        from flowgenius.llm.base import ZhipuProvider
+
+        # Temporarily set environment variable
+        os.environ["ZHIPU_API_KEY"] = "env-test-key"
+
+        try:
+            provider = ZhipuProvider()
+            assert provider.config.api_key == "env-test-key"
+        finally:
+            # Clean up environment variable
+            del os.environ["ZHIPU_API_KEY"]
+
+    def test_generate_mock(self):
+        """Test generate method with mocked client."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Generated text from Zhipu"
+        mock_client.chat.completions.create.return_value = mock_response
+
+        from flowgenius.llm.base import ZhipuProvider
+
+        provider = ZhipuProvider(api_key="test-key")
+        provider._client = mock_client  # Inject mock client
+
+        result = provider.generate("test prompt")
+
+        assert result == "Generated text from Zhipu"
+        mock_client.chat.completions.create.assert_called_once()
+        # Verify the call was made with correct parameters
+        call_args = mock_client.chat.completions.create.call_args
+        assert call_args[1]['model'] == 'glm-4-flash'  # Default model for Zhipu
+
+    def test_generate_json_mock(self):
+        """Test generate_json method with mocked client."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = '{"result": "zhipu-success"}'
+        mock_client.chat.completions.create.return_value = mock_response
+
+        from flowgenius.llm.base import ZhipuProvider
+
+        provider = ZhipuProvider(api_key="test-key")
+        provider._client = mock_client  # Inject mock client
+
+        result = provider.generate_json("test prompt")
+
+        assert result == {"result": "zhipu-success"}
+
+    def test_no_api_key_error(self):
+        """Test that ValueError is raised when no API key is provided."""
+        from flowgenius.llm.base import ZhipuProvider
+
+        # Ensure no ZHIPU_API_KEY is set
+        if "ZHIPU_API_KEY" in os.environ:
+            del os.environ["ZHIPU_API_KEY"]
+
+        provider = ZhipuProvider()
+        provider._client = None  # Reset client to force error
+
+        with pytest.raises(ValueError, match="Zhipu API key is required"):
+            provider._get_client()
+
+    def test_import_error(self):
+        """Test that ImportError is raised when openai is not installed."""
+        from flowgenius.llm.base import ZhipuProvider
+
+        provider = ZhipuProvider(api_key="test-key")
+        provider._client = None  # Reset client
+
+        # Mock the import to raise ImportError
+        import builtins
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "openai":
+                raise ImportError("openai not installed")
+            return real_import(name, *args, **kwargs)
+
+        with patch.object(builtins, "__import__", side_effect=mock_import):
+            with pytest.raises(ImportError, match="'openai' package is required"):
+                provider._get_client()

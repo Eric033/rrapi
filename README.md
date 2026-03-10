@@ -25,6 +25,12 @@ A traffic-driven automated API test script generation tool that solves the probl
 - Data-driven testing support (YAML, JSON, CSV, Excel)
 - Allure report integration
 
+### LLM Integration
+- Intelligent test case generation using Large Language Models
+- Support for Zhipu AI (智谱AI), OpenAI, and Anthropic
+- Automatic assertion generation with semantic analysis
+- Smart correlation detection for request dependencies
+
 ## Installation
 
 ```bash
@@ -32,11 +38,50 @@ A traffic-driven automated API test script generation tool that solves the probl
 git clone https://github.com/example/flowgenius-smartadapter.git
 cd flowgenius-smartadapter
 
-# Install dependencies
-pip install -r requirements.txt
+# Install with pip
+pip install -e .
 
-# Install development dependencies
-pip install -r requirements-dev.txt
+# Or install with LLM support (recommended for test case generation)
+pip install -e ".[llm]"
+
+# For proxy mode traffic capture
+pip install -e ".[proxy]"
+
+# Install all optional dependencies
+pip install -e ".[llm,proxy,dev]"
+```
+
+### LLM Configuration
+
+FlowGenius uses LLM (Large Language Model) for intelligent test case generation. Currently supports:
+
+- **Zhipu AI** (智谱AI) - GLM series models (glm-4, glm-4-flash)
+- **OpenAI** - GPT series models
+- **Anthropic** - Claude series models
+
+Set your API key via environment variable:
+
+```bash
+# For Zhipu AI (recommended for Chinese users)
+export ZHIPU_API_KEY="your-zhipu-api-key"
+
+# For OpenAI
+export OPENAI_API_KEY="your-openai-api-key"
+
+# For Anthropic
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
+```
+
+Or configure programmatically:
+
+```python
+from flowgenius.llm import ZhipuProvider
+
+# Using environment variable
+provider = ZhipuProvider()
+
+# Or pass API key directly
+provider = ZhipuProvider(api_key="your-api-key")
 ```
 
 ## Quick Start
@@ -57,12 +102,49 @@ python scripts/process_logs.py --source /path/to/access.log --output-dir ./traff
 
 ### 2. Generate Tests
 
+**Using Python API with LLM (Recommended):**
+
+```python
+from flowgenius.llm import ZhipuProvider
+from flowgenius.core.generator import GeneratorOrchestrator
+from flowgenius.parsers.har_parser import HARParser
+
+# Initialize LLM provider
+llm_provider = ZhipuProvider()  # Uses ZHIPU_API_KEY env var
+
+# Initialize generator with LLM
+generator = GeneratorOrchestrator(
+    base_url="https://api.example.com",
+    llm_provider=llm_provider
+)
+
+# Parse traffic
+parser = HARParser()
+flows = parser.parse("traffic.har")
+
+# Generate assertions (optional)
+assertion_sets = {}  # Will be auto-generated
+
+# Generate full test project
+results = generator.generate_full_project(
+    flows=flows,
+    assertion_sets=assertion_sets,
+    output_dir="./generated_tests"
+)
+
+print(f"Generated project: {results}")
+```
+
+**Using CLI:**
+
 ```bash
 python scripts/generate_tests.py \
     --traffic ./traffic/traffic.har \
     --swagger https://api.example.com/swagger.json \
     --output-dir ./generated_tests
 ```
+
+**Note:** Test case generation now uses LLM for intelligent code generation. Make sure to set your API key before running.
 
 ### 3. Run Tests
 
@@ -107,6 +189,13 @@ flowgenius/
 │   │   ├── api.py                 # API definition models
 │   │   ├── correlation.py         # Correlation models
 │   │   └── assertion.py           # Assertion models
+│   ├── llm/                       # LLM integration
+│   │   ├── base.py                # Provider base classes
+│   │   ├── config.py              # LLM configuration
+│   │   ├── code_generator.py      # LLM-based code generation
+│   │   ├── assertion_analyzer.py  # Assertion analysis
+│   │   ├── correlation_analyzer.py# Correlation analysis
+│   │   └── prompt_templates.py    # Prompt templates
 │   └── utils/                     # Utilities
 │       ├── jsonpath.py            # JSONPath utilities
 │       ├── regex_utils.py         # Regex utilities

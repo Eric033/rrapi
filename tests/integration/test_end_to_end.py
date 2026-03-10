@@ -11,7 +11,7 @@ from flowgenius.core.parser import ParserOrchestrator
 from flowgenius.core.correlator import FlowCorrelator
 from flowgenius.core.validator import Validator
 from flowgenius.core.generator import GeneratorOrchestrator
-from flowgenius.models.traffic import TrafficFlow
+from flowgenius.models.traffic import TrafficFlow, TrafficRequest, TrafficResponse
 
 
 class TestEndToEnd:
@@ -62,25 +62,22 @@ class TestEndToEnd:
         for file_path in results.values():
             assert Path(file_path).exists()
 
-    def test_pipeline_with_swagger(self, temp_dir, sample_swagger_data):
+    def test_pipeline_with_swagger(self, temp_dir, sample_swagger_data, sample_har_data):
         """Test pipeline with Swagger integration."""
         # Create Swagger file
         swagger_file = temp_dir / "swagger.yaml"
         swagger_file.write_text(yaml.dump(sample_swagger_data))
 
-        # Create HAR file from sample data
+        # Parse HAR from sample data
         from flowgenius.parsers.har_parser import HARParser
         from flowgenius.parsers.swagger_parser import SwaggerParser
 
         har_parser = HARParser()
-        flows = har_parser.parse(temp_dir / "fixtures" / "har_samples" / "sample.har")
+        flows = har_parser.parse(sample_har_data)
 
         # Parse Swagger
         swagger_parser = SwaggerParser()
         swagger_doc = swagger_parser.parse(str(swagger_file))
-
-        # Match flows to endpoints
-        matched = swagger_doc.find_endpoint_by_url("https://api.example.com/login")
 
         # Generate assertions with Swagger
         validator = Validator()

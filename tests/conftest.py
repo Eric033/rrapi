@@ -87,7 +87,7 @@ def sample_har_data() -> Dict[str, Any]:
                     "startedDateTime": "2026-02-25T10:00:00Z",
                     "request": {
                         "method": "POST",
-                        "url": "https://api.example.com/login",
+                        "url": "https://api.example.com/api/login",
                         "headers": [
                             {"name": "Content-Type", "value": "application/json"}
                         ],

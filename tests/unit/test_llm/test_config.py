@@ -14,11 +14,11 @@ class TestLLMConfig:
         """Test default configuration values."""
         config = LLMConfig()
 
-        assert config.provider == "openai"
-        assert config.model == "gpt-4"
+        assert config.provider == "zhipu"
+        assert config.model == "glm-4-flash"
         assert config.temperature == 0.3
-        assert config.max_tokens == 2000
-        assert config.timeout == 30
+        assert config.max_tokens == 4000
+        assert config.timeout == 60
         assert config.enable_assertion_analysis is True
         assert config.enable_code_generation is True
         assert config.enable_correlation_analysis is True

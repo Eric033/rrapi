@@ -19,6 +19,7 @@ from flowgenius.utils.jsonpath import (
 )
 from flowgenius.utils.logger import get_logger
 from flowgenius.utils.regex_utils import extract_tokens, extract_ids
+from flowgenius.core.config import RuleConfig, default_rule_config
 
 if TYPE_CHECKING:
     from flowgenius.llm.base import LLMProvider
@@ -34,15 +35,18 @@ class FlowCorrelator:
     def __init__(
         self,
         llm_provider: Optional["LLMProvider"] = None,
-        enable_llm: bool = True
+        enable_llm: bool = True,
+        rule_config: Optional["RuleConfig"] = None
     ):
         """Initialize flow correlator.
 
         Args:
             llm_provider: Optional LLM provider for semantic analysis
             enable_llm: Whether to use LLM enhancement if provider is available
+            rule_config: Configuration for business rules
         """
         self.logger = get_logger("flowgenius.correlator")
+        self.rule_config = rule_config or default_rule_config
         self.llm_provider = llm_provider
         self.enable_llm = enable_llm and llm_provider is not None
         self._llm_analyzer: Optional["LLMCorrelationAnalyzer"] = None
@@ -326,20 +330,22 @@ class FlowCorrelator:
         Returns:
             True if values are valid correlation candidates
         """
+        policy = self.rule_config.exclusion_policy
+
         # Filter out very short values
-        if len(str(value1)) < 3:
+        if len(str(value1)) < policy.min_string_length:
             return False
 
         # Filter out common numbers
         try:
             num = int(value1)
-            if num < 100:
+            if num < policy.min_integer_value:
                 return False
         except (ValueError, TypeError):
             pass
 
         # Filter out common booleans
-        if str(value1).lower() in ("true", "false", "yes", "no"):
+        if str(value1).lower() in policy.excluded_booleans:
             return False
 
         return True

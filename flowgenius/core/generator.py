@@ -37,7 +37,7 @@ class GeneratorOrchestrator:
 
         Args:
             base_url: Base URL for API
-            llm_provider: Optional LLM provider for enhanced code generation
+            llm_provider: LLM provider for enhanced code generation (REQUIRED for test case generation)
             enable_llm: Whether to use LLM enhancement if provider is available
         """
         self.base_url = base_url
@@ -50,7 +50,8 @@ class GeneratorOrchestrator:
         self.enable_llm = enable_llm and llm_provider is not None
         self._llm_code_generator: Optional["LLMCodeGenerator"] = None
 
-        if self.enable_llm:
+        # Require LLM provider for enhanced test case generation
+        if self.enable_llm and llm_provider:
             try:
                 from flowgenius.llm.code_generator import LLMCodeGenerator
                 self._llm_code_generator = LLMCodeGenerator(llm_provider)
@@ -110,9 +111,27 @@ class GeneratorOrchestrator:
 
         # Generate test cases
         api_mappings = self._build_api_mappings(flows, swagger_doc)
-        test_module = self.test_case_generator.generate_test_module(
-            flows, assertion_sets, grouped_by_endpoint=True
-        )
+
+        # Use LLM to generate test cases if available, otherwise fallback to rule-based
+        if self._llm_code_generator:
+            # Generate test module using LLM
+            try:
+                llm_generated_code = self._llm_code_generator.generate_test_module(
+                    flows, assertion_sets, self.base_url, group_by_endpoint=True
+                )
+                test_module = llm_generated_code.code
+            except Exception as e:
+                self.logger.warning(f"LLM test generation failed: {e}, falling back to rule-based generation")
+                test_module = self.test_case_generator.generate_test_module(
+                    flows, assertion_sets, grouped_by_endpoint=True
+                )
+        else:
+            # Fallback to rule-based generation
+            self.logger.info("Using rule-based test case generation (no LLM provider configured)")
+            test_module = self.test_case_generator.generate_test_module(
+                flows, assertion_sets, grouped_by_endpoint=True
+            )
+
         test_file = testcase_dir / "test_api.py"
         test_file.write_text(test_module, encoding='utf-8')
         results["test_cases"] = str(test_file)
@@ -254,7 +273,7 @@ class GeneratorOrchestrator:
         output_file: str
     ) -> str:
         """
-        Generate a single test file with all test cases.
+        Generate a single test file with all test cases using LLM.
 
         Args:
             flows: List of TrafficFlow objects
@@ -267,9 +286,22 @@ class GeneratorOrchestrator:
         output_path = Path(output_file)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        test_module = self.test_case_generator.generate_test_module(
-            flows, assertion_sets, grouped_by_endpoint=False
-        )
+        if self._llm_code_generator:
+            try:
+                test_module = self._llm_code_generator.generate_test_module(
+                    flows, assertion_sets, self.base_url, group_by_endpoint=False
+                ).code
+            except Exception as e:
+                self.logger.warning(f"LLM test generation failed: {e}, falling back to rule-based generation")
+                test_module = self.test_case_generator.generate_test_module(
+                    flows, assertion_sets, grouped_by_endpoint=False
+                )
+        else:
+            # Fallback to rule-based generation
+            self.logger.info("Using rule-based test case generation (no LLM provider configured)")
+            test_module = self.test_case_generator.generate_test_module(
+                flows, assertion_sets, grouped_by_endpoint=False
+            )
 
         output_path.write_text(test_module, encoding='utf-8')
         self.logger.info(f"Generated test file: {output_path}")

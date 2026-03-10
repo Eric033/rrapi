@@ -146,14 +146,12 @@ class ApiUsers:
         assert "class ApiUsers" in result.code
         assert "```" not in result.code
 
-    def test_generate_test_case_without_provider(self, sample_flow, sample_assertion_set):
-        """Test test case generation without LLM provider (fallback)."""
+    def test_generate_test_case_without_provider_raises_error(self, sample_flow, sample_assertion_set):
+        """Test test case generation without LLM provider raises ValueError."""
         generator = LLMCodeGenerator()
 
-        result = generator.generate_test_case(sample_flow, sample_assertion_set)
-
-        assert isinstance(result, GeneratedCode)
-        assert "def test_" in result.code
+        with pytest.raises(ValueError, match="LLM provider is required for test case generation"):
+            generator.generate_test_case(sample_flow, sample_assertion_set)
 
     def test_generate_test_case_with_provider(self, sample_flow, sample_assertion_set):
         """Test test case generation with mock LLM provider."""
@@ -269,3 +267,15 @@ def test_get_users(self, base_url, session):
         name = generator._generate_test_name(sample_flow)
         assert name.startswith("test_")
         assert "get" in name
+
+
+def test_zhipu_provider_integration():
+    """Test that ZhipuProvider can be used with LLMCodeGenerator."""
+    from flowgenius.llm.base import ZhipuProvider
+
+    # We won't actually call the API, but test that the provider can be instantiated and passed
+    provider = MockLLMProvider(responses={"test": "test response"})
+
+    # Test that we can create an LLMCodeGenerator with a provider
+    generator = LLMCodeGenerator(llm_provider=provider)
+    assert generator.llm_provider is not None

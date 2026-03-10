@@ -49,6 +49,9 @@ class LLMCodeGenerator:
 
     This class uses LLM to generate well-documented, semantic
     Python code for API objects and test cases.
+
+    For test case generation, LLM provider is REQUIRED - no fallback to templates.
+    For API class generation, fallback is still available.
     """
 
     def __init__(
@@ -59,7 +62,7 @@ class LLMCodeGenerator:
         """Initialize the LLM code generator.
 
         Args:
-            llm_provider: LLM provider instance
+            llm_provider: LLM provider instance (required for test case generation)
             config: LLM configuration
         """
         self.llm_provider = llm_provider
@@ -222,6 +225,9 @@ class {class_name}:
     ) -> GeneratedCode:
         """Generate a test case using LLM.
 
+        IMPORTANT: LLM provider is REQUIRED for test case generation.
+        There is NO fallback to template-based generation.
+
         Args:
             flow: TrafficFlow to generate test for
             assertion_set: AssertionSet with validations
@@ -231,105 +237,65 @@ class {class_name}:
 
         Returns:
             GeneratedCode with the test case
+
+        Raises:
+            ValueError: If llm_provider is not configured
+            Exception: If LLM generation fails after retries
         """
         if not self.llm_provider:
-            return self._fallback_test_case(flow, assertion_set, correlation_chain)
+            raise ValueError(
+                "LLM provider is required for test case generation. "
+                "Please provide an LLM provider (e.g., ZhipuProvider, OpenAIProvider) "
+                "when initializing LLMCodeGenerator."
+            )
 
-        try:
-            path = flow.request.url
-            method = flow.request.method
+        path = flow.request.url
+        method = flow.request.method
 
-            # Build request params summary
-            request_params = {
-                "headers": dict(list(flow.request.headers.items())[:5]),  # Limit
-                "query_params": flow.request.query_params,
-                "body": flow.request.get_body_json(),
-            }
+        # Build request params summary
+        request_params = {
+            "headers": dict(list(flow.request.headers.items())[:5]),  # Limit
+            "query_params": flow.request.query_params,
+            "body": flow.request.get_body_json(),
+        }
 
-            # Build assertions summary
-            assertions = []
-            for assertion in assertion_set.assertions:
-                assertions.append({
-                    "type": assertion.assertion_type.value,
-                    "description": assertion.description,
-                    "path": assertion.actual_jsonpath,
-                    "expected": assertion.expected_value,
+        # Build assertions summary
+        assertions = []
+        for assertion in assertion_set.assertions:
+            assertions.append({
+                "type": assertion.assertion_type.value,
+                "description": assertion.description,
+                "path": assertion.actual_jsonpath,
+                "expected": assertion.expected_value,
+            })
+
+        # Build correlation vars
+        correlation_vars = []
+        if correlation_chain:
+            for correlation in correlation_chain.correlations:
+                correlation_vars.append({
+                    "name": correlation.variable_name,
+                    "source_path": correlation.response_jsonpath,
+                    "target_location": correlation.request_location,
                 })
 
-            # Build correlation vars
-            correlation_vars = []
-            if correlation_chain:
-                for correlation in correlation_chain.correlations:
-                    correlation_vars.append({
-                        "name": correlation.variable_name,
-                        "source_path": correlation.response_jsonpath,
-                        "target_location": correlation.request_location,
-                    })
-
-            prompt = GENERATE_TEST_CASE_PROMPT.format(
-                path=path,
-                method=method,
-                request_params=json.dumps(request_params, ensure_ascii=False, indent=2),
-                assertions=json.dumps(assertions, ensure_ascii=False, indent=2),
-                correlation_vars=json.dumps(correlation_vars, ensure_ascii=False, indent=2),
-                business_logic=business_logic or self._infer_business_logic(flow),
-            )
-
-            code = self.llm_provider.generate(prompt)
-            code = self._extract_code_from_markdown(code)
-
-            return GeneratedCode(
-                code=code,
-                language="python",
-                description=f"Test case for {method} {path}",
-                imports=["pytest", "requests"],
-                dependencies=["pytest", "requests"],
-            )
-
-        except Exception as e:
-            self.logger.error(f"LLM test case generation failed: {e}")
-            return self._fallback_test_case(flow, assertion_set, correlation_chain)
-
-    def _fallback_test_case(
-        self,
-        flow: TrafficFlow,
-        assertion_set: AssertionSet,
-        correlation_chain: Optional[CorrelationChain] = None
-    ) -> GeneratedCode:
-        """Generate test case using fallback rules.
-
-        Args:
-            flow: TrafficFlow
-            assertion_set: AssertionSet
-            correlation_chain: Optional correlation chain
-
-        Returns:
-            GeneratedCode with rule-based test case
-        """
-        test_name = self._generate_test_name(flow)
-
-        code = f'''    def {test_name}(self, base_url, session):
-        """测试 {flow.request.method} {flow.request.url}"""
-
-        # 发送请求
-        response = session.{flow.request.method.lower()}(
-            base_url + "{flow.request.url}",
+        prompt = GENERATE_TEST_CASE_PROMPT.format(
+            path=path,
+            method=method,
+            request_params=json.dumps(request_params, ensure_ascii=False, indent=2),
+            assertions=json.dumps(assertions, ensure_ascii=False, indent=2),
+            correlation_vars=json.dumps(correlation_vars, ensure_ascii=False, indent=2),
+            business_logic=business_logic or self._infer_business_logic(flow),
         )
 
-        # 断言
-'''
-
-        # Add assertions
-        for assertion in assertion_set.assertions[:5]:  # Limit to 5
-            code += f"        # {assertion.description}\n"
-            assertion_code = assertion.get_assertion_code()
-            if assertion_code:
-                code += f"        {assertion_code}\n"
+        # Use generate_with_retry for automatic retry on failure
+        code = self.llm_provider.generate_with_retry(prompt)
+        code = self._extract_code_from_markdown(code)
 
         return GeneratedCode(
             code=code,
             language="python",
-            description=f"Test case for {flow.request.method} {flow.request.url}",
+            description=f"Test case for {method} {path}",
             imports=["pytest", "requests"],
             dependencies=["pytest", "requests"],
         )
@@ -453,12 +419,18 @@ Returns:
                 lines.append(f'    """Test cases for {method} {url}"""')
                 lines.append('')
 
-                # Generate test cases for each flow
+                # Generate test cases for each flow using LLM if provider is available
                 for flow in endpoint_flow_list:
                     assertion_set = assertion_sets.get(flow.flow_id)
                     if assertion_set:
-                        test_code = self._fallback_test_case(flow, assertion_set)
-                        lines.append(test_code.code)
+                        try:
+                            test_code = self.generate_test_case(flow, assertion_set)
+                            lines.append(test_code.code)
+                        except Exception as e:
+                            self.logger.error(f"Failed to generate test case with LLM: {e}")
+                            # Fallback to basic template for module generation only (not for individual test generation)
+                            lines.append(f'    # Test case for {flow.request.url} (LLM generation failed)\n')
+                            lines.append('    pass\n')
 
         return GeneratedCode(
             code='\n'.join(lines),

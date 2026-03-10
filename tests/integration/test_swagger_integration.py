@@ -68,13 +68,19 @@ class TestSwaggerIntegration:
 
         # Match flows to endpoints
         for flow in flows:
-            endpoint = swagger_doc.find_endpoint_by_url(flow.request.url)
+            # Use find_endpoint with both path and method for better matching
+            from urllib.parse import urlparse
+            parsed = urlparse(flow.request.url)
+            path = parsed.path
+
+            endpoint = swagger_doc.find_endpoint(path, flow.request.method)
+            if endpoint is None:
+                # Try fuzzy matching
+                endpoint = swagger_doc.find_endpoint_by_url(flow.request.url)
+
             if flow.request.url == "https://api.example.com/login":
                 assert endpoint is not None
                 assert endpoint.method == "POST"
-            else:
-                # May or may not match
-                pass
 
     def test_generate_assertions_from_swagger(self, sample_swagger_data):
         """Test generating assertions from Swagger definitions."""
@@ -121,7 +127,7 @@ class TestSwaggerIntegration:
         parser = SwaggerParser()
         swagger_doc = parser.parse(sample_swagger_data)
 
-        server_urls = parser.get_server_urls(str(sample_swagger_data))
+        server_urls = [server.get("url", "") for server in swagger_doc.servers]
         assert len(server_urls) > 0
         assert "https://api.example.com" in server_urls
 

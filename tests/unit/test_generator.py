@@ -59,8 +59,10 @@ class TestAPIObjectGenerator:
 
         class_code = generator.generate_class(endpoint)
 
-        assert "id:" in class_code
-        assert "path" in class_code.lower()
+        # Check that the path parameter is included in method signature
+        assert "id: int" in class_code
+        # Check that the URL path template is present
+        assert "/api/users/{id}" in class_code
 
     def test_generate_from_flow(self):
         """Test generating class from flow."""
@@ -279,7 +281,7 @@ class TestDataFileGenerator:
         assert "assertions" in test_data
 
 
-class TestDataBuilder:
+class TestTestDataBuilder:
     """Tests for TestDataBuilder."""
 
     def test_init(self):

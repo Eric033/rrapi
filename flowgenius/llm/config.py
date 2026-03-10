@@ -11,7 +11,7 @@ class LLMConfig:
     """LLM configuration settings.
 
     Attributes:
-        provider: LLM provider name ("openai", "anthropic", "local")
+        provider: LLM provider name ("zhipu", "openai", "anthropic")
         api_key: API key for the provider
         model: Model identifier to use
         temperature: Temperature for response generation
@@ -20,17 +20,17 @@ class LLMConfig:
         enable_assertion_analysis: Enable LLM-enhanced assertion analysis
         enable_code_generation: Enable LLM-enhanced code generation
         enable_correlation_analysis: Enable LLM-enhanced correlation analysis
-        fallback_to_rules: Fall back to rule-based methods on LLM failure
+        fallback_to_rules: Fall back to rule-based methods on LLM failure (deprecated for test generation)
         retry_count: Number of retries on API failure
         retry_delay: Delay between retries in seconds
     """
 
-    provider: str = "openai"
+    provider: str = "zhipu"
     api_key: Optional[str] = None
-    model: str = "gpt-4"
+    model: str = "glm-4-flash"
     temperature: float = 0.3
-    max_tokens: int = 2000
-    timeout: int = 30
+    max_tokens: int = 4000
+    timeout: int = 60
 
     # Feature toggles
     enable_assertion_analysis: bool = True
@@ -59,34 +59,49 @@ class LLMConfig:
         """Create LLMConfig from environment variables.
 
         Environment variables:
-            LLM_PROVIDER: Provider name (default: "openai")
+            LLM_PROVIDER: Provider name (default: "zhipu")
+            ZHIPU_API_KEY: 智谱AI API key
             OPENAI_API_KEY: OpenAI API key
             ANTHROPIC_API_KEY: Anthropic API key
-            LLM_MODEL: Model identifier (default: "gpt-4")
+            LLM_MODEL: Model identifier (default: "glm-4-flash" for zhipu)
             LLM_TEMPERATURE: Temperature (default: 0.3)
-            LLM_MAX_TOKENS: Max tokens (default: 2000)
-            LLM_TIMEOUT: Timeout in seconds (default: 30)
+            LLM_MAX_TOKENS: Max tokens (default: 4000)
+            LLM_TIMEOUT: Timeout in seconds (default: 60)
             LLM_FALLBACK_TO_RULES: Enable fallback (default: "true")
 
         Returns:
             LLMConfig instance
         """
-        provider = os.getenv("LLM_PROVIDER", "openai").lower()
+        provider = os.getenv("LLM_PROVIDER", "zhipu").lower()
 
         # Get API key based on provider
         api_key = None
-        if provider == "openai":
+        default_model = "glm-4-flash"  # Default to zhipu's most cost-effective model
+
+        if provider == "zhipu":
+            api_key = os.getenv("ZHIPU_API_KEY")
+            default_model = "glm-4-flash"
+        elif provider == "openai":
             api_key = os.getenv("OPENAI_API_KEY")
+            default_model = "gpt-4"
         elif provider == "anthropic":
             api_key = os.getenv("ANTHROPIC_API_KEY")
+            default_model = "claude-3-opus-20240229"
+
+        # Determine model based on provider
+        env_model = os.getenv("LLM_MODEL")
+        if env_model:
+            model = env_model
+        else:
+            model = default_model
 
         return cls(
             provider=provider,
             api_key=api_key,
-            model=os.getenv("LLM_MODEL", "gpt-4" if provider == "openai" else "claude-3-opus-20240229"),
+            model=model,
             temperature=float(os.getenv("LLM_TEMPERATURE", "0.3")),
-            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "2000")),
-            timeout=int(os.getenv("LLM_TIMEOUT", "30")),
+            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "4000")),
+            timeout=int(os.getenv("LLM_TIMEOUT", "60")),
             fallback_to_rules=os.getenv("LLM_FALLBACK_TO_RULES", "true").lower() == "true",
         )
 
